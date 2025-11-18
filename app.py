@@ -11,21 +11,6 @@ FINISHED_DIR = BASE / "data" / "finished"
 FINISHED_IMG_DIR = FINISHED_DIR / "images"             # preferred
 ALT_EVAL_DIR = FINISHED_DIR / "eval_outputs"           # fallback
 ANNOT_PATH = FINISHED_DIR / "annotations.json"
-# ---- safe rerun helper (cross-version) ----
-try:
-    _st_rerun = st.experimental_rerun # pyright: ignore[reportAttributeAccessIssue]
-except Exception:
-    try:
-        # newer internal API
-        from streamlit.runtime.scriptrunner import RerunException
-        def _st_rerun(): # pyright: ignore[reportRedeclaration]
-            # raise the internal exception to trigger a rerun
-            raise RerunException(None) # pyright: ignore[reportArgumentType]
-    except Exception:
-        # last-resort: notify user to refresh
-        def _st_rerun(): # pyright: ignore[reportRedeclaration]
-            st.warning("Auto-reload not available in this Streamlit build — please refresh the page.")
-
 # ---- helpers ----
 def find_image_dir():
     if FINISHED_IMG_DIR.exists() and any(FINISHED_IMG_DIR.iterdir()):
@@ -179,5 +164,4 @@ with col2:
         except Exception as e:
             st.error(f"Could not open or render image: {e}")
 
-st.caption("Viewer uses data/finished/images or data/finished/eval_outputs + annotations.json")
 st.caption("Project completed by Karthikeya Siripragada (SE22UECM018) and Karthik Raj Gupta (SE22UCAM004)")
