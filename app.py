@@ -4,6 +4,29 @@ import os, io, json, statistics
 from pathlib import Path
 from PIL import Image, ImageDraw
 import streamlit as st
+# ---- safe rerun helper (simple, cross-version) ----
+# Use st.experimental_rerun if it exists; otherwise show a warning.
+if hasattr(st, "experimental_rerun"):
+    _st_rerun = st.experimental_rerun # type: ignore
+else:
+    def _st_rerun():
+        # Graceful fallback for Streamlit builds without experimental_rerun.
+        # This avoids importing internal APIs and keeps linters happy.
+        st.warning("Auto-reload not available in this Streamlit build — please refresh the page to reload.")
+
+# ---- safe rerun helper (cross-version) ----
+try:
+    _st_rerun = st.experimental_rerun  # type: ignore
+except Exception:
+    try:
+        from streamlit.runtime.scriptrunner import RerunException
+        def _st_rerun(): # type: ignore
+            # Trigger Streamlit internal rerun
+            raise RerunException(None) # type: ignore
+    except Exception:
+        def _st_rerun():
+            # Last-resort: user must manually refresh
+            st.warning("Auto-reload not available in this Streamlit build — please refresh the page to reload.")
 
 # ---- CONFIG (adjust if your folder names differ) ----
 BASE = Path(__file__).resolve().parent
@@ -11,6 +34,7 @@ FINISHED_DIR = BASE / "data" / "finished"
 FINISHED_IMG_DIR = FINISHED_DIR / "images"             # preferred
 ALT_EVAL_DIR = FINISHED_DIR / "eval_outputs"           # fallback
 ANNOT_PATH = FINISHED_DIR / "annotations.json"
+
 # ---- helpers ----
 def find_image_dir():
     if FINISHED_IMG_DIR.exists() and any(FINISHED_IMG_DIR.iterdir()):
@@ -99,10 +123,6 @@ if DEBUG:
 
 col1, col2 = st.columns([1,3])
 
-class _st_rerun:
-    def __init__(self):
-        pass
-
 with col1:
     st.subheader("Browse")
     asin_filter = st.text_input("Filter by ASIN (optional)")
@@ -116,6 +136,7 @@ with col1:
     show_all = st.checkbox("Show all annotations (instead of best)", value=False)
     if st.button("Reload list"):
         _st_rerun()
+
 with col2:
     if not chosen:
         st.info("Pick an image on the left to preview the finished overlay + annotation details.")
