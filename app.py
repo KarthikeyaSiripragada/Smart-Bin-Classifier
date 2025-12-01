@@ -130,12 +130,7 @@ with col1:
     def _fmt(name):
         return name if len(name) <= 48 else name[:45] + "..."
 
-    # single selectbox only (no empty-string sentinel)
     chosen = st.selectbox("Choose image", options=all_images, format_func=_fmt, index=0)
-
-    show_all = st.checkbox("Show all annotations (instead of best)", value=False)
-    if st.button("Reload list"):
-        _st_rerun()
 
 with col2:
     if not chosen:
@@ -145,29 +140,23 @@ with col2:
         st.markdown(f"**File:** `{chosen}`")
         ann_list = index.get(chosen, [])
 
-        # optionally filter by ASIN if user typed one
+        # filter if ASIN search is used
         if asin_filter:
-            ann_list = [a for a in ann_list if str(a.get("asin","")).lower() == asin_filter.lower()]
+            ann_list = [a for a in ann_list if str(a.get("asin", "")).lower() == asin_filter.lower()]
 
         if not ann_list:
             boxes, confs = [], None
             st.markdown("No annotation entry for this image (displaying raw image).")
         else:
-            if show_all:
-                sel_idx = st.selectbox(
-                    "Annotation entry",
-                    list(range(len(ann_list))),
-                    format_func=lambda i: f"{i} — asin:{ann_list[i].get('asin','N/A')} count:{len(ann_list[i].get('boxes', ann_list[i].get('bboxes', [])))}"
-                )
-                ann = ann_list[sel_idx]
-            else:
-                scores = [_ann_score(a) for a in ann_list]
-                best_idx = int(max(range(len(scores)), key=lambda i: scores[i]))
-                ann = ann_list[best_idx]
-                st.caption(f"Showing best annotation (score={scores[best_idx]:.3f}). Toggle 'Show all' to inspect others.")
+            # Always pick the best annotation automatically
+            scores = [_ann_score(a) for a in ann_list]
+            best_idx = int(max(range(len(scores)), key=lambda i: scores[i]))
+            ann = ann_list[best_idx]
+            st.caption(f"Best annotation auto-selected (score={scores[best_idx]:.3f}).")
 
             boxes = ann.get("boxes") or ann.get("bboxes") or ann.get("bboxes_xyxy") or ann.get("boxes_xyxy") or []
             confs = ann.get("confs") or ann.get("confs_conf") or ann.get("confs_float") or None
+
             asin = ann.get("asin", "N/A")
             count = ann.get("count", len(boxes))
             st.markdown(f"**ASIN:** `{asin}` — **Count:** {count} — **Boxes:** {len(boxes)}")
@@ -184,5 +173,4 @@ with col2:
             st.download_button("Download overlay (jpg)", data=bio.read(), file_name=dl_name, mime="image/jpeg")
         except Exception as e:
             st.error(f"Could not open or render image: {e}")
-
 st.caption("Project completed by Karthikeya Siripragada (SE22UECM018) and Karthik Raj Gupta (SE22UCAM004)")
